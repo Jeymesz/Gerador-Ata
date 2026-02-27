@@ -6,6 +6,8 @@
 <title>Ata Sacramental</title>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Raleway:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 <style>
 :root {
   --gold: #8B6914; --gold-light: #C9992A; --cream: #FAF7F2;
@@ -169,6 +171,59 @@ body { font-family: 'Raleway', sans-serif; background: #2C2416; background-image
 .export-loading { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; color: white; font-family: 'Raleway', sans-serif; gap: 1rem; font-size: 0.9rem; }
 .export-spinner { width: 38px; height: 38px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===== FIREBASE SETUP MODAL ===== */
+.fb-setup-overlay {
+  position: fixed; inset: 0; background: rgba(20,15,8,0.92);
+  z-index: 3000; display: flex; align-items: center; justify-content: center; padding: 1rem;
+}
+.fb-setup-box {
+  background: #FAF7F2; border-radius: 16px; padding: 1.8rem 1.5rem;
+  max-width: 480px; width: 100%; box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+}
+.fb-setup-box h2 { font-family: 'EB Garamond', serif; font-size: 1.3rem; color: #003366; margin-bottom: 0.3rem; }
+.fb-setup-box p  { font-size: 0.82rem; color: #666; margin-bottom: 1.2rem; line-height: 1.5; }
+.fb-setup-box .step { background: #F0EDE4; border-radius: 8px; padding: 0.8rem 1rem; margin-bottom: 0.8rem; font-size: 0.8rem; color: #444; line-height: 1.6; }
+.fb-setup-box .step strong { color: #003366; }
+.fb-setup-box .step a { color: #C9992A; text-decoration: none; font-weight: 600; }
+.fb-setup-box textarea {
+  width: 100%; height: 110px; border: 1px solid #D4C9B0; border-radius: 8px;
+  padding: 0.6rem 0.8rem; font-family: 'Courier New', monospace; font-size: 0.75rem;
+  resize: none; outline: none; background: #FFFDF8; color: #333; margin-bottom: 0.8rem;
+}
+.fb-setup-box textarea:focus { border-color: #8B6914; }
+.fb-setup-btn {
+  width: 100%; background: linear-gradient(135deg,#8B6914,#C9992A); color: #FFF8E8;
+  border: none; border-radius: 8px; padding: 0.78rem; font-family: 'Raleway',sans-serif;
+  font-size: 0.88rem; font-weight: 700; cursor: pointer; letter-spacing: 0.08em;
+}
+.fb-setup-btn:hover { opacity: 0.9; }
+.fb-skip-btn {
+  width: 100%; background: transparent; color: #888; border: 1px solid #D4C9B0;
+  border-radius: 8px; padding: 0.6rem; font-family: 'Raleway',sans-serif;
+  font-size: 0.8rem; cursor: pointer; margin-top: 0.5rem; letter-spacing: 0.05em;
+}
+
+/* ===== SYNC STATUS BAR ===== */
+.sync-bar {
+  display: none; align-items: center; justify-content: space-between;
+  background: #1A2A3A; border-radius: 10px; padding: 0.55rem 0.9rem;
+  margin-bottom: 0.8rem; gap: 0.6rem; flex-wrap: wrap;
+}
+.sync-bar.visible { display: flex; }
+.sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #aaa; flex-shrink: 0; }
+.sync-dot.online  { background: #25D366; box-shadow: 0 0 6px #25D36688; }
+.sync-dot.syncing { background: #F0A500; animation: pulse 0.8s infinite alternate; }
+@keyframes pulse { to { opacity: 0.3; } }
+.sync-label { color: #C8D8E8; font-size: 0.75rem; font-weight: 600; flex: 1; }
+.sync-session { color: #7A9AB0; font-size: 0.68rem; font-family: 'Courier New', monospace; letter-spacing: 0.05em; }
+.sync-copy-btn {
+  background: rgba(255,255,255,0.1); border: none; color: #C8D8E8;
+  padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.72rem; cursor: pointer;
+  font-family: 'Raleway', sans-serif; font-weight: 600; transition: background 0.2s;
+}
+.sync-copy-btn:hover { background: rgba(255,255,255,0.2); }
+.sync-users { color: #7A9AB0; font-size: 0.72rem; }
 
 /* PRINT */
 @media print {
@@ -411,6 +466,42 @@ body { font-family: 'Raleway', sans-serif; background: #2C2416; background-image
     </div>
   </div>
 
+</div>
+
+<!-- FIREBASE SETUP MODAL -->
+<div class="fb-setup-overlay" id="fb-setup-overlay" style="display:none!important">
+  <div class="fb-setup-box">
+    <h2>&#128293; Configurar Colaboracao em Tempo Real</h2>
+    <p>Para sincronizar a ata com outros dispositivos, conecte ao Firebase (gratuito). Feito uma vez, salvo para sempre.</p>
+
+    <div class="step">
+      <strong>1.</strong> Acesse <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a><br>
+      <strong>2.</strong> Crie um projeto (ex: <em>ata-sacramental-vilagois</em>)<br>
+      <strong>3.</strong> Clique em <em>Realtime Database</em> → Criar banco de dados → Modo de teste<br>
+      <strong>4.</strong> Va em Configuracoes do projeto → Adicionar app (Web) → copie o <code>firebaseConfig</code> e cole abaixo
+    </div>
+
+    <textarea id="fb-config-input" placeholder='Cole aqui o objeto firebaseConfig:
+{
+  apiKey: "AIza...",
+  authDomain: "...",
+  databaseURL: "https://...",
+  projectId: "...",
+  ...
+}'></textarea>
+    <div id="fb-config-error" style="color:#C0392B;font-size:0.78rem;margin-bottom:0.5rem;display:none"></div>
+    <button class="fb-setup-btn" onclick="connectFirebase()">&#9889; Conectar ao Firebase</button>
+    <button class="fb-skip-btn" onclick="skipFirebase()">Usar sem colaboracao (modo offline)</button>
+  </div>
+</div>
+
+<!-- SYNC BAR (shown when Firebase connected) -->
+<div class="sync-bar" id="sync-bar">
+  <div class="sync-dot" id="sync-dot"></div>
+  <span class="sync-label" id="sync-label">Conectando...</span>
+  <span class="sync-session" id="sync-session-label"></span>
+  <button class="sync-copy-btn" onclick="copyShareLink()" id="sync-share-btn">&#128279; Compartilhar</button>
+  <span class="sync-users" id="sync-users-label"></span>
 </div>
 
 <!-- MODAL HINOS -->
@@ -841,6 +932,328 @@ function generateAta() {
   `;
   showTab('preview');
 }
+
+// ══════════════════════════════════════════════════
+//  FIREBASE COLLABORATION
+// ══════════════════════════════════════════════════
+let db = null;
+let sessionId = null;
+let isSyncing = false;
+let syncTimeout = null;
+let isRemoteUpdate = false;
+
+// All syncable field IDs
+const SYNC_FIELDS = [
+  'data','frequencia','presidindo','dirigindo',
+  'regente','organista','recepcionista','oracao1',
+  'orador1','orador2','ultimo_orador','ultima_oracao',
+  'familias_ausentes','acoes_bispado',
+  'hino1num','hino1nome','hino_sac_num','hino_sac_nome',
+  'hino_esp_num','hino_esp_nome','hino_final_num','hino_final_nome'
+];
+
+// ── Setup ──────────────────────────────────────────
+function showFirebaseSetup() {
+  document.getElementById('fb-setup-overlay').style.display = 'flex';
+}
+function skipFirebase() {
+  document.getElementById('fb-setup-overlay').style.display = 'none';
+  localStorage.setItem('fb_skipped','1');
+}
+
+function connectFirebase() {
+  const raw = document.getElementById('fb-config-input').value.trim();
+  const errEl = document.getElementById('fb-config-error');
+  errEl.style.display = 'none';
+
+  let config;
+  try {
+    // Accept both JS object and JSON
+    const jsonStr = raw
+      .replace(/\/\/.*$/gm,'')
+      .replace(/([{,])\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":')
+      .replace(/'/g,'"');
+    const match = jsonStr.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('Formato invalido');
+    config = JSON.parse(match[0]);
+    if (!config.databaseURL) throw new Error('databaseURL nao encontrado. Certifique-se de ativar o Realtime Database.');
+  } catch(e) {
+    errEl.textContent = 'Erro: ' + e.message;
+    errEl.style.display = 'block';
+    return;
+  }
+
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(config);
+    else firebase.app();
+    db = firebase.database();
+    localStorage.setItem('fb_config', JSON.stringify(config));
+    document.getElementById('fb-setup-overlay').style.display = 'none';
+    initSession();
+  } catch(e) {
+    errEl.textContent = 'Erro ao conectar: ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+// initFirebaseFromStorage: replaced by embedded config
+
+// ── Session ID ─────────────────────────────────────
+function getSessionId() {
+  // Check URL param first
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('ata')) return params.get('ata');
+  // Use today's date as default session
+  const d = new Date();
+  return 'ata-' + d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function initSession() {
+  if (!db) return;
+  sessionId = getSessionId();
+
+  // Update URL without reload
+  const url = new URL(window.location.href);
+  url.searchParams.set('ata', sessionId);
+  window.history.replaceState({}, '', url);
+
+  // Update sync bar
+  const bar = document.getElementById('sync-bar');
+  bar.classList.add('visible');
+  document.getElementById('sync-session-label').textContent = sessionId;
+  setSyncStatus('syncing');
+
+  const ref = db.ref('sessions/' + sessionId);
+
+  // Load existing data first
+  ref.once('value').then(snap => {
+    const data = snap.val();
+    if (data && data.fields) {
+      isRemoteUpdate = true;
+      loadFromSnapshot(data);
+      isRemoteUpdate = false;
+    }
+    setSyncStatus('online');
+
+    // Then listen for real-time changes
+    ref.on('value', snap => {
+      if (isRemoteUpdate) return;
+      const data = snap.val();
+      if (!data) return;
+      isRemoteUpdate = true;
+      loadFromSnapshot(data);
+      isRemoteUpdate = false;
+      setSyncStatus('online');
+    });
+  }).catch(() => setSyncStatus('offline'));
+
+  // Track online presence
+  const presenceRef = db.ref('sessions/' + sessionId + '/presence/' + generateUID());
+  presenceRef.set({ online: true, time: Date.now() });
+  presenceRef.onDisconnect().remove();
+
+  // Count online users
+  db.ref('sessions/' + sessionId + '/presence').on('value', snap => {
+    const count = snap.numChildren();
+    const el = document.getElementById('sync-users-label');
+    if (count > 0) el.textContent = count + (count===1?' pessoa':' pessoas') + ' online';
+    else el.textContent = '';
+  });
+
+  // Attach listeners to all fields for syncing
+  attachSyncListeners();
+}
+
+function generateUID() {
+  return Math.random().toString(36).substr(2,9);
+}
+
+// ── Sync Helpers ───────────────────────────────────
+function setSyncStatus(status) {
+  const dot = document.getElementById('sync-dot');
+  const label = document.getElementById('sync-label');
+  dot.className = 'sync-dot ' + status;
+  if (status === 'online')  label.textContent = 'Sincronizado';
+  if (status === 'syncing') label.textContent = 'Sincronizando...';
+  if (status === 'offline') label.textContent = 'Sem conexao';
+}
+
+function collectState() {
+  const fields = {};
+  SYNC_FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) fields[id] = el.value;
+  });
+
+  // Autoridades e visitantes
+  fields._autoridades = getNomes('autoridades');
+  fields._visitantes  = getNomes('visitantes');
+
+  // Anuncios
+  fields._anuncios = anuncios.map(id => {
+    const el = document.getElementById('anuncio-text-' + id);
+    return el ? el.value : '';
+  }).filter(Boolean);
+
+  // Chamados
+  fields._chamados = chamados.map(id => ({
+    tipo: document.getElementById('chamado-tipo-' + id)?.value || 'A',
+    nome: v('chamado-nome-' + id)
+  })).filter(c => c.nome);
+
+  // Hino badges
+  ['hino1','hino_sac','hino_esp','hino_final'].forEach(k => {
+    const badge = document.getElementById(k + '-badge');
+    const text  = document.getElementById(k + '-text');
+    if (badge) fields['_badge_' + k] = badge.textContent;
+    if (text)  fields['_text_'  + k] = text.textContent;
+  });
+
+  fields._meetingType = meetingType;
+
+  return fields;
+}
+
+function loadFromSnapshot(data) {
+  if (!data.fields) return;
+  const f = data.fields;
+
+  SYNC_FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && f[id] !== undefined) el.value = f[id];
+  });
+
+  // Restore hino badges/text
+  ['hino1','hino_sac','hino_esp','hino_final'].forEach(k => {
+    const badge = document.getElementById(k + '-badge');
+    const text  = document.getElementById(k + '-text');
+    if (badge && f['_badge_' + k]) badge.textContent = f['_badge_' + k];
+    if (text  && f['_text_'  + k]) { text.textContent = f['_text_' + k]; text.classList.remove('placeholder'); }
+  });
+
+  // Meeting type
+  if (f._meetingType && f._meetingType !== meetingType) {
+    setMeetingType(f._meetingType);
+  }
+
+  // Restore autoridades/visitantes
+  if (Array.isArray(f._autoridades)) {
+    document.getElementById('autoridades-list').innerHTML = '';
+    nomes.autoridades = [];
+    f._autoridades.forEach(nome => { addNome('autoridades'); const last = nomes.autoridades[nomes.autoridades.length-1]; if(last) document.getElementById('autoridades-nome-'+last).value = nome; });
+  }
+  if (Array.isArray(f._visitantes)) {
+    document.getElementById('visitantes-list').innerHTML = '';
+    nomes.visitantes = [];
+    f._visitantes.forEach(nome => { addNome('visitantes'); const last = nomes.visitantes[nomes.visitantes.length-1]; if(last) document.getElementById('visitantes-nome-'+last).value = nome; });
+  }
+
+  // Restore anuncios
+  if (Array.isArray(f._anuncios)) {
+    document.getElementById('anuncios-list').innerHTML = '';
+    anuncios = [];
+    f._anuncios.forEach(txt => { addAnuncio(); const last = anuncios[anuncios.length-1]; if(last) document.getElementById('anuncio-text-'+last).value = txt; });
+  }
+
+  // Restore chamados
+  if (Array.isArray(f._chamados)) {
+    document.getElementById('chamados-list').innerHTML = '';
+    chamados = [];
+    f._chamados.forEach(ch => {
+      addChamado();
+      const last = chamados[chamados.length-1];
+      if (last) {
+        document.getElementById('chamado-tipo-'+last).value = ch.tipo;
+        document.getElementById('chamado-nome-'+last).value = ch.nome;
+      }
+    });
+  }
+}
+
+function pushToFirebase() {
+  if (!db || !sessionId || isRemoteUpdate) return;
+  setSyncStatus('syncing');
+  clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(() => {
+    const fields = collectState();
+    db.ref('sessions/' + sessionId + '/fields').set(fields)
+      .then(() => setSyncStatus('online'))
+      .catch(() => setSyncStatus('offline'));
+  }, 600); // debounce 600ms
+}
+
+function attachSyncListeners() {
+  SYNC_FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', pushToFirebase);
+    if (el && el.tagName === 'SELECT') el.addEventListener('change', pushToFirebase);
+  });
+
+  // Watch for meeting type changes (handled in setMeetingType)
+  // Watch for dynamic lists via MutationObserver
+  const observer = new MutationObserver(() => { if (!isRemoteUpdate) pushToFirebase(); });
+  ['anuncios-list','chamados-list','autoridades-list','visitantes-list'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) observer.observe(el, { childList: true, subtree: true, characterData: true });
+  });
+}
+
+// Override setMeetingType to also sync
+const _origSetMeetingType = setMeetingType;
+function setMeetingType(type) {
+  _origSetMeetingType(type);
+  if (!isRemoteUpdate) pushToFirebase();
+}
+
+// Copy share link
+function copyShareLink() {
+  const url = window.location.href;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.getElementById('sync-share-btn');
+    btn.textContent = '✓ Copiado!';
+    setTimeout(() => btn.innerHTML = '&#128279; Compartilhar', 2000);
+  }).catch(() => {
+    // Fallback
+    const inp = document.createElement('input');
+    inp.value = url;
+    document.body.appendChild(inp);
+    inp.select();
+    document.execCommand('copy');
+    document.body.removeChild(inp);
+    alert('Link copiado: ' + url);
+  });
+}
+
+// ── Firebase Config (embutido) ─────────────────────────────
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCyt4GHv2ghUhxNLoEXRHipbWCKXydavdM",
+  authDomain: "ata-vila-gois.firebaseapp.com",
+  databaseURL: "https://ata-vila-gois-default-rtdb.firebaseio.com",
+  projectId: "ata-vila-gois",
+  storageBucket: "ata-vila-gois.firebasestorage.app",
+  messagingSenderId: "809735939005",
+  appId: "1:809735939005:web:1dc1045bfe90c9cbbea8d4"
+};
+
+// ── Boot Firebase ──────────────────────────────────
+const _origOnload = window.onload;
+window.onload = function() {
+  if (_origOnload) _origOnload();
+
+  // Move sync bar to top of container
+  const bar = document.getElementById('sync-bar');
+  const container = document.querySelector('.container');
+  if (container && bar) container.prepend(bar);
+
+  // Conectar direto com config embutido
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.database();
+    initSession();
+  } catch(e) {
+    console.warn('Firebase init error:', e.message);
+  }
+};
 </script>
 </body>
 </html>
