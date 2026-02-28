@@ -125,9 +125,9 @@ body { font-family: 'Raleway', sans-serif; background: #2C2416; background-image
 
 /* CF field */
 .ata-cf { display: flex; flex-direction: column; gap: 0.15rem; }
-.ata-cf-label { font-size: 0.63rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #9A8060; }
-.ata-cf-value { font-size: 1rem; font-weight: 600; color: #003366; line-height: 1.3; border-bottom: 1.5px solid #EDE8DC; padding-bottom: 0.28rem; }
-.ata-cf-value.plain { color: #333; font-weight: 400; font-size: 0.9rem; }
+.ata-cf-label { font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #7A6040; }
+.ata-cf-value { font-size: 1.1rem; font-weight: 700; color: #003366; line-height: 1.35; border-bottom: 1.5px solid #EDE8DC; padding-bottom: 0.28rem; }
+.ata-cf-value.plain { color: #222; font-weight: 600; font-size: 1rem; }
 
 /* Grids inside card */
 .ata-card-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
@@ -136,10 +136,10 @@ body { font-family: 'Raleway', sans-serif; background: #2C2416; background-image
 
 /* Hino in card */
 .ata-card-hino { display: flex; align-items: center; gap: 0.75rem; background: #F0F6FF; border-radius: 10px; padding: 0.65rem 0.85rem; }
-.ata-hino-circle { background: #003366; color: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.92rem; flex-shrink: 0; }
+.ata-hino-circle { background: #003366; color: white; border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1rem; flex-shrink: 0; }
 .ata-hino-info { flex: 1; }
 .ata-hino-info-label { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #7A9AB0; }
-.ata-hino-info-name { font-size: 0.92rem; font-weight: 700; color: #003366; line-height: 1.25; }
+.ata-hino-info-name { font-size: 1rem; font-weight: 800; color: #003366; line-height: 1.3; }
 
 /* Chamado item */
 .ata-chamado-item { display: flex; align-items: center; gap: 0.65rem; padding: 0.5rem 0; border-bottom: 1px solid #F0ECE4; }
@@ -147,10 +147,10 @@ body { font-family: 'Raleway', sans-serif; background: #2C2416; background-image
 .ata-chamado-badge { width: 27px; height: 27px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 800; flex-shrink: 0; }
 .badge-a { background: #003366; color: white; }
 .badge-d { background: #E8EEF5; color: #003366; border: 1.5px solid #003366; }
-.ata-chamado-nome { font-size: 0.9rem; font-weight: 600; color: #1A2A3A; line-height: 1.3; }
+.ata-chamado-nome { font-size: 1rem; font-weight: 700; color: #1A2A3A; line-height: 1.3; }
 
 /* Anúncio */
-.ata-anuncio-item { display: flex; gap: 0.55rem; align-items: flex-start; padding: 0.45rem 0; border-bottom: 1px solid #F0ECE4; font-size: 0.88rem; color: #333; line-height: 1.4; }
+.ata-anuncio-item { display: flex; gap: 0.55rem; align-items: flex-start; padding: 0.5rem 0; border-bottom: 1px solid #F0ECE4; font-size: 1rem; font-weight: 600; color: #222; line-height: 1.45; }
 .ata-anuncio-item:last-child { border-bottom: none; }
 .ata-anuncio-dot { width: 6px; height: 6px; background: var(--gold-light); border-radius: 50%; margin-top: 0.42rem; flex-shrink: 0; }
 
@@ -161,7 +161,7 @@ body { font-family: 'Raleway', sans-serif; background: #2C2416; background-image
 .ata-testemunho-desc { font-size: 0.78rem; opacity: 0.72; font-style: italic; }
 
 /* Obs */
-.ata-obs-text { font-size: 0.88rem; color: #444; min-height: 28px; line-height: 1.5; white-space: pre-wrap; }
+.ata-obs-text { font-size: 1rem; font-weight: 600; color: #222; min-height: 28px; line-height: 1.5; white-space: pre-wrap; }
 
 /* Assinaturas */
 .ata-sigs { display: flex; gap: 1rem; margin-top: 0.5rem; }
@@ -337,8 +337,10 @@ body { font-family: 'Raleway', sans-serif; background: #2C2416; background-image
     <!-- Anuncios -->
     <div class="form-section">
       <div class="form-section-title">Anuncios</div>
-      <div id="anuncios-list"></div>
-      <button class="add-btn" onclick="addAnuncio()">+ Adicionar Anuncio</button>
+      <div class="field">
+        <label>Digite todos os anuncios abaixo</label>
+        <textarea id="anuncios-textarea" placeholder="Ex:&#10;• Reuniao de jovens na sexta as 19h&#10;• Entrega de carnets no corredor&#10;• Jovens adultos sabado as 10h" style="min-height:140px;line-height:1.6;font-size:0.9rem;resize:vertical"></textarea>
+      </div>
     </div>
 
     <!-- Musica -->
@@ -528,7 +530,7 @@ let currentPickerTarget = null;
 window.onload = () => {
   const today = new Date();
   document.getElementById('data').value = today.toISOString().split('T')[0];
-  addChamado(); addChamado(); addAnuncio();
+  addChamado(); addChamado();
   function setHino(target, num, nome) { currentPickerTarget = target; selectHino(num, nome); currentPickerTarget = null; }
   setHino('hino1', '12', 'Que Manha Maravilhosa!');
   setHino('hino_sac', '103', 'Enquanto Unidos em Amor');
@@ -543,6 +545,9 @@ window.onload = () => {
   document.getElementById('orador1').value = 'TESTEMUNHO';
   document.getElementById('orador2').value = 'TESTEMUNHO';
   document.getElementById('ala-nome').value = 'Ala Vila Gois';
+  // Sync anuncios textarea
+  const ataTa = document.getElementById('anuncios-textarea');
+  if (ataTa) ataTa.addEventListener('input', () => { if(!isRemoteUpdate) pushToFirebase(); });
 };
 
 // ── MEETING TYPE ─────────────────────────────────────────────
@@ -575,7 +580,9 @@ function addNome(grupo) {
   el.style.cssText='display:flex;gap:0.5rem;align-items:center';
   el.innerHTML=`<input type="text" id="${grupo}-nome-${id}" placeholder="Nome completo..." style="flex:1;border:1px solid #D4C9B0;background:#FFFDF8;border-radius:6px;padding:0.48rem 0.7rem;font-family:Raleway,sans-serif;font-size:0.85rem;outline:none"><button class="remove-btn" onclick="removeNome('${grupo}',${id})">&#x2715;</button>`;
   document.getElementById(grupo+'-list').appendChild(el);
-  document.getElementById(grupo+'-nome-'+id).focus();
+  const nomeInput = document.getElementById(grupo+'-nome-'+id);
+  nomeInput.focus();
+  nomeInput.addEventListener('input', () => { if(!isRemoteUpdate) pushToFirebase(); });
 }
 function removeNome(grupo, id) { nomes[grupo]=nomes[grupo].filter(x=>x!==id); document.getElementById(grupo+'-item-'+id).remove(); }
 function getNomes(grupo) { return nomes[grupo].map(id=>{const el=document.getElementById(grupo+'-nome-'+id);return el?el.value.trim():'';}).filter(Boolean); }
@@ -587,6 +594,7 @@ function addAnuncio() {
   el.id='anuncio-'+id; el.style.cssText='display:flex;gap:0.5rem;align-items:center;margin-bottom:0.45rem';
   el.innerHTML=`<input type="text" id="anuncio-text-${id}" placeholder="Descreva o anuncio..." style="flex:1;border:1px solid #D4C9B0;background:#FFFDF8;border-radius:6px;padding:0.48rem 0.7rem;font-family:Raleway,sans-serif;font-size:0.85rem;outline:none"><button class="remove-btn" onclick="removeAnuncio(${id})">&#x2715;</button>`;
   document.getElementById('anuncios-list').appendChild(el);
+  document.getElementById('anuncio-text-'+id).addEventListener('input', () => { if(!isRemoteUpdate) pushToFirebase(); });
 }
 function removeAnuncio(id) { anuncios=anuncios.filter(x=>x!==id); document.getElementById('anuncio-'+id).remove(); }
 
@@ -597,11 +605,15 @@ function addChamado() {
   el.id='chamado-'+id; el.className='chamado-row';
   el.innerHTML=`<select id="chamado-tipo-${id}" style="border:1px solid #D4C9B0;background:#FFFDF8;border-radius:6px;padding:0.45rem 0.3rem;font-size:0.8rem;font-family:Raleway,sans-serif;outline:none"><option value="A">Apoio (A)</option><option value="D">Desobrigacao (D)</option></select><input type="text" id="chamado-nome-${id}" placeholder="Nome — Cargo/Chamado" style="border:1px solid #D4C9B0;background:#FFFDF8;border-radius:6px;padding:0.48rem 0.7rem;font-family:Raleway,sans-serif;font-size:0.85rem;outline:none"><button class="remove-btn" onclick="removeChamado(${id})">&#x2715;</button>`;
   document.getElementById('chamados-list').appendChild(el);
+  // Sync when chamado nome or tipo changes
+  document.getElementById('chamado-nome-'+id).addEventListener('input', () => { if(!isRemoteUpdate) pushToFirebase(); });
+  document.getElementById('chamado-tipo-'+id).addEventListener('change', () => { if(!isRemoteUpdate) pushToFirebase(); });
 }
 function removeChamado(id) { chamados=chamados.filter(x=>x!==id); document.getElementById('chamado-'+id).remove(); }
 
 // ── HELPERS ──────────────────────────────────────────────────
 function v(id) { const el=document.getElementById(id); return el?el.value.trim():''; }
+function getAnunciosText() { const el=document.getElementById('anuncios-textarea'); return el?el.value.trim():''; }
 function formatDate(d) { if(!d) return {dia:'__',mes:'__',ano:'____'}; const [y,m,dd]=d.split('-'); return {dia:dd,mes:m,ano:y}; }
 function cf(label, value, plain=false) {
   return `<div class="ata-cf"><span class="ata-cf-label">${label}</span><span class="ata-cf-value ${plain?'plain':''}">${value||'—'}</span></div>`;
@@ -815,7 +827,8 @@ function generateAta() {
   const alaName = document.getElementById('ala-nome').value || 'Ala';
   const autorList = getNomes('autoridades').join(', ');
   const visitList = getNomes('visitantes').join(', ');
-  const anunciosList = anuncios.map(id => v('anuncio-text-'+id)).filter(Boolean);
+  const anunciosRaw = getAnunciosText();
+  const anunciosList = anunciosRaw ? anunciosRaw.split('\n').map(l=>l.trim()).filter(Boolean) : [];
   const ultimoOrador = v('ultimo_orador') || '—';
 
   // Chamados cards
@@ -1009,7 +1022,7 @@ function getSessionId() {
 }
 
 function initSession() {
-  if (!db) return;
+  if (!db || typeof firebase === 'undefined') return;
   sessionId = getSessionId();
 
   // Update URL without reload
@@ -1090,10 +1103,8 @@ function collectState() {
   fields._visitantes  = getNomes('visitantes');
 
   // Anuncios
-  fields._anuncios = anuncios.map(id => {
-    const el = document.getElementById('anuncio-text-' + id);
-    return el ? el.value : '';
-  }).filter(Boolean);
+  const anunciosTa = document.getElementById('anuncios-textarea');
+  fields._anuncios_text = anunciosTa ? anunciosTa.value : '';
 
   // Chamados
   fields._chamados = chamados.map(id => ({
@@ -1149,10 +1160,9 @@ function loadFromSnapshot(data) {
   }
 
   // Restore anuncios
-  if (Array.isArray(f._anuncios)) {
-    document.getElementById('anuncios-list').innerHTML = '';
-    anuncios = [];
-    f._anuncios.forEach(txt => { addAnuncio(); const last = anuncios[anuncios.length-1]; if(last) document.getElementById('anuncio-text-'+last).value = txt; });
+  if (f._anuncios_text !== undefined) {
+    const ta = document.getElementById('anuncios-textarea');
+    if (ta) ta.value = f._anuncios_text;
   }
 
   // Restore chamados
@@ -1171,7 +1181,7 @@ function loadFromSnapshot(data) {
 }
 
 function pushToFirebase() {
-  if (!db || !sessionId || isRemoteUpdate) return;
+  if (!db || !sessionId || isRemoteUpdate || typeof firebase === 'undefined') return;
   setSyncStatus('syncing');
   clearTimeout(syncTimeout);
   syncTimeout = setTimeout(() => {
@@ -1190,20 +1200,23 @@ function attachSyncListeners() {
   });
 
   // Watch for meeting type changes (handled in setMeetingType)
-  // Watch for dynamic lists via MutationObserver
-  const observer = new MutationObserver(() => { if (!isRemoteUpdate) pushToFirebase(); });
-  ['anuncios-list','chamados-list','autoridades-list','visitantes-list'].forEach(id => {
+  // Watch ONLY for add/remove rows (childList), NOT keystrokes
+  // Typing is synced via input listeners attached when each row is created
+  const observer = new MutationObserver((mutations) => {
+    if (!isRemoteUpdate && mutations.some(m => m.type === 'childList')) pushToFirebase();
+  });
+  ['chamados-list','autoridades-list','visitantes-list'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) observer.observe(el, { childList: true, subtree: true, characterData: true });
+    if (el) observer.observe(el, { childList: true });
   });
 }
 
-// Override setMeetingType to also sync
-const _origSetMeetingType = setMeetingType;
-function setMeetingType(type) {
-  _origSetMeetingType(type);
+// Patch setMeetingType to also push to Firebase after toggling
+const _setMeetingTypeBase = setMeetingType;
+setMeetingType = function(type) {
+  _setMeetingTypeBase(type);
   if (!isRemoteUpdate) pushToFirebase();
-}
+};
 
 // Copy share link
 function copyShareLink() {
@@ -1246,12 +1259,16 @@ window.onload = function() {
   if (container && bar) container.prepend(bar);
 
   // Conectar direto com config embutido
+  // (Firebase SDK pode nao estar disponivel em ambientes offline/preview)
   try {
-    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
-    db = firebase.database();
-    initSession();
+    if (typeof firebase !== 'undefined') {
+      if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+      db = firebase.database();
+      initSession();
+    }
+    // Se Firebase nao estiver disponivel, app funciona normalmente em modo offline
   } catch(e) {
-    console.warn('Firebase init error:', e.message);
+    // silencioso — funciona sem Firebase
   }
 };
 </script>
