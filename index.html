@@ -644,7 +644,7 @@ function addChamado() {
   const id = uid(); chamados.push(id);
   const el = document.createElement('div');
   el.id='chamado-'+id; el.className='chamado-row';
-  el.innerHTML=`<select id="chamado-tipo-${id}" style="border:1px solid #D4C9B0;background:#FFFDF8;border-radius:6px;padding:0.45rem 0.3rem;font-size:0.8rem;font-family:Raleway,sans-serif;outline:none"><option value="A">Apoio (A)</option><option value="D">Desobrigacao (D)</option></select><input type="text" id="chamado-nome-${id}" placeholder="Nome — Cargo/Chamado" style="border:1px solid #D4C9B0;background:#FFFDF8;border-radius:6px;padding:0.48rem 0.7rem;font-family:Raleway,sans-serif;font-size:0.85rem;outline:none"><button class="remove-btn" onclick="removeChamado(${id})">&#x2715;</button>`;
+  el.innerHTML=`<select id="chamado-tipo-${id}" style="border:1px solid #D4C9B0;background:#FFFDF8;border-radius:6px;padding:0.45rem 0.3rem;font-size:0.8rem;font-family:Raleway,sans-serif;outline:none"><option value="A">Apoio (A)</option><option value="D">Desobrigacao (D)</option></select><input type="text" id="chamado-nome-${id}" placeholder="Nome — Cargo/Chamado" enterkeyhint="done" autocomplete="off" style="border:1px solid #D4C9B0;background:#FFFDF8;border-radius:6px;padding:0.48rem 0.7rem;font-family:Raleway,sans-serif;font-size:0.85rem;outline:none"><button class="remove-btn" onclick="removeChamado(${id})">&#x2715;</button>`;
   document.getElementById('chamados-list').appendChild(el);
   // Sync when chamado nome or tipo changes
   document.getElementById('chamado-nome-'+id).addEventListener('input', () => { if(!isRemoteUpdate) pushToFirebase(); });
@@ -830,13 +830,16 @@ async function gerarCanvasAta() {
   bar.style.display = 'none';
   if (syncBar) syncBar.style.display = 'none';
   await new Promise(r => setTimeout(r, 150));
+  // Captura com largura fixa de 420px para layout consistente no PDF
   const canvas = await html2canvas(container, {
     scale: 2.5,
     backgroundColor: '#F5F0E8',
     useCORS: true,
     logging: false,
-    windowWidth: 480,
-    width: container.scrollWidth,
+    width: 420,
+    windowWidth: 420,
+    scrollX: 0,
+    scrollY: 0,
     height: container.scrollHeight
   });
   bar.style.display = '';
@@ -901,43 +904,56 @@ async function shareWhatsApp() {
 // ── Salvar PDF (imagem dentro do PDF) ─────────────────────
 async function canvasParaPDF(canvas) {
   const { jsPDF } = window.jspdf;
-  const imgData = canvas.toDataURL('image/jpeg', 0.95);
-  const pxToMm = 25.4 / 96;
-  const imgW = canvas.width / 2.5;  // reverter scale
-  const imgH = canvas.height / 2.5;
-  const mmW = imgW * pxToMm;
-  const mmH = imgH * pxToMm;
 
-  // A4: 210 x 297mm
-  const A4_W = 210, A4_H = 297;
-  const margem = 10;
-  const dispW = A4_W - margem * 2;
-  const ratio = dispW / mmW;
-  const finalW = dispW;
-  const finalH = mmH * ratio;
+  // A4 em mm
+  const A4_W = 210, A4_H = 297, MARGEM = 10;
+  const dispW = A4_W - MARGEM * 2; // largura disponivel = 190mm
+  const dispH = A4_H - MARGEM * 2; // altura por pagina = 277mm
 
-  const pdf = new jsPDF({ orientation: finalH > A4_H ? 'p' : 'p', unit: 'mm', format: 'a4' });
-  let posY = margem;
-  let restH = finalH;
+  // Converter canvas pixels -> mm (96dpi, scale=2.5)
+  const DPI = 96, SCALE = 2.5;
+  const px2mm = 25.4 / (DPI * SCALE);
+  const totalMmH = canvas.height * px2mm;   // altura total em mm
+  const totalMmW = canvas.width  * px2mm;   // largura total em mm
 
-  while (restH > 0) {
-    const pageH = A4_H - margem * 2;
-    const sliceH = Math.min(restH, pageH);
-    const srcY = (finalH - restH) / ratio / pxToMm * 2.5;
-    const slicePx = sliceH / ratio / pxToMm * 2.5;
+  // Fator de escala: encaixa largura do canvas na area disponivel
+  const escala = dispW / totalMmW;
+  const alturaFinalMm = totalMmH * escala;  // altura final apos escala
 
-    // Recortar fatia do canvas para cada pagina
-    const sliceCanvas = document.createElement('canvas');
-    sliceCanvas.width = canvas.width;
-    sliceCanvas.height = Math.ceil(slicePx);
-    const ctx = sliceCanvas.getContext('2d');
-    ctx.drawImage(canvas, 0, -Math.floor(srcY), canvas.width, canvas.height);
-    const sliceImg = sliceCanvas.toDataURL('image/jpeg', 0.95);
-    pdf.addImage(sliceImg, 'JPEG', margem, posY, finalW, sliceH);
+  // Quantas paginas precisamos?
+  const numPaginas = Math.ceil(alturaFinalMm / dispH);
 
-    restH -= sliceH;
-    if (restH > 0) { pdf.addPage(); posY = margem; }
+  const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+
+  for (let pg = 0; pg < numPaginas; pg++) {
+    if (pg > 0) pdf.addPage();
+
+    // Qual trecho do canvas corresponde a esta pagina (em pixels do canvas original)
+    const startMm = pg * dispH;           // inicio em mm
+    const endMm   = Math.min(startMm + dispH, alturaFinalMm); // fim em mm
+    const sliceHMm = endMm - startMm;    // altura da fatia em mm
+
+    // Converter de volta para pixels no canvas original
+    const startPx = Math.floor(startMm / escala / px2mm);
+    const sliceHPx = Math.ceil(sliceHMm / escala / px2mm);
+
+    // Criar canvas da fatia
+    const fatia = document.createElement('canvas');
+    fatia.width  = canvas.width;
+    fatia.height = Math.min(sliceHPx, canvas.height - startPx);
+    const ctx = fatia.getContext('2d');
+    ctx.drawImage(canvas,
+      0, startPx,                    // origem no canvas fonte
+      canvas.width, fatia.height,    // tamanho fonte
+      0, 0,                          // destino
+      fatia.width, fatia.height      // tamanho destino
+    );
+
+    const imgData = fatia.toDataURL('image/jpeg', 0.92);
+    const alturaImg = (fatia.height * px2mm) * escala;
+    pdf.addImage(imgData, 'JPEG', MARGEM, MARGEM, dispW, alturaImg);
   }
+
   return pdf;
 }
 
@@ -1288,36 +1304,64 @@ function loadFromSnapshot(data) {
     setMeetingType(f._meetingType);
   }
 
-  // Restore autoridades/visitantes
-  if (Array.isArray(f._autoridades)) {
-    document.getElementById('autoridades-list').innerHTML = '';
-    nomes.autoridades = [];
-    f._autoridades.forEach(nome => { addNome('autoridades'); const last = nomes.autoridades[nomes.autoridades.length-1]; if(last) document.getElementById('autoridades-nome-'+last).value = nome; });
+  // Restore autoridades/visitantes — preserva foco
+  function restoreNomes(grupo, arr) {
+    const lista = document.getElementById(grupo+'-list');
+    const active = document.activeElement;
+    if (!lista || !Array.isArray(arr)) return;
+    if (lista.contains(active)) {
+      arr.forEach((nome, i) => {
+        if (nomes[grupo][i]) {
+          const el = document.getElementById(grupo+'-nome-'+nomes[grupo][i]);
+          if (el && el !== active) el.value = nome;
+        }
+      });
+    } else {
+      lista.innerHTML = '';
+      nomes[grupo] = [];
+      arr.forEach(nome => {
+        addNome(grupo);
+        const last = nomes[grupo][nomes[grupo].length-1];
+        if (last) document.getElementById(grupo+'-nome-'+last).value = nome;
+      });
+    }
   }
-  if (Array.isArray(f._visitantes)) {
-    document.getElementById('visitantes-list').innerHTML = '';
-    nomes.visitantes = [];
-    f._visitantes.forEach(nome => { addNome('visitantes'); const last = nomes.visitantes[nomes.visitantes.length-1]; if(last) document.getElementById('visitantes-nome-'+last).value = nome; });
-  }
+  restoreNomes('autoridades', f._autoridades);
+  restoreNomes('visitantes', f._visitantes);
 
-  // Restore anuncios
+  // Restore anuncios — preserva foco
   if (f._anuncios_text !== undefined) {
     const ta = document.getElementById('anuncios-textarea');
-    if (ta) ta.value = f._anuncios_text;
+    if (ta && document.activeElement !== ta) ta.value = f._anuncios_text;
   }
 
-  // Restore chamados
+  // Restore chamados — só reconstrói se usuario nao esta digitando nessa lista
   if (Array.isArray(f._chamados)) {
-    document.getElementById('chamados-list').innerHTML = '';
-    chamados = [];
-    f._chamados.forEach(ch => {
-      addChamado();
-      const last = chamados[chamados.length-1];
-      if (last) {
-        document.getElementById('chamado-tipo-'+last).value = ch.tipo;
-        document.getElementById('chamado-nome-'+last).value = ch.nome;
-      }
-    });
+    const activeEl = document.activeElement;
+    const chamadosList = document.getElementById('chamados-list');
+    const userIsTypingHere = chamadosList && chamadosList.contains(activeEl);
+    if (!userIsTypingHere) {
+      chamadosList.innerHTML = '';
+      chamados = [];
+      f._chamados.forEach(ch => {
+        addChamado();
+        const last = chamados[chamados.length-1];
+        if (last) {
+          document.getElementById('chamado-tipo-'+last).value = ch.tipo;
+          document.getElementById('chamado-nome-'+last).value = ch.nome;
+        }
+      });
+    } else {
+      // Atualiza só valores, sem recriar elementos (preserva foco)
+      f._chamados.forEach((ch, i) => {
+        if (chamados[i]) {
+          const tipoEl = document.getElementById('chamado-tipo-'+chamados[i]);
+          const nomeEl = document.getElementById('chamado-nome-'+chamados[i]);
+          if (tipoEl && tipoEl !== activeEl) tipoEl.value = ch.tipo;
+          if (nomeEl && nomeEl !== activeEl) nomeEl.value = ch.nome;
+        }
+      });
+    }
   }
 }
 
