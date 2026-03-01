@@ -6,6 +6,7 @@
 <title>Ata Sacramental</title>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Raleway:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 <style>
@@ -225,13 +226,51 @@ body { font-family: 'Raleway', sans-serif; background: #2C2416; background-image
 .sync-copy-btn:hover { background: rgba(255,255,255,0.2); }
 .sync-users { color: #7A9AB0; font-size: 0.72rem; }
 
-/* PRINT */
+/* PRINT A4 */
 @media print {
-  body { background: white; }
-  .app-header, .tabs, .form-panel, .action-bar, .meeting-type-bar, .modal-overlay { display: none !important; }
-  .ata-cards-container { background: white; padding: 0; gap: 0.5rem; }
-  .ata-card { box-shadow: none; border: 1px solid #ddd; border-radius: 6px; break-inside: avoid; }
-  .ata-card-header, .ata-card-testemunho { border-radius: 6px; }
+  @page { size: A4 portrait; margin: 12mm 14mm; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  body { background: white !important; font-size: 11px; }
+  .app-header, .tabs, .form-panel, .action-bar, .meeting-type-bar,
+  .modal-overlay, .sync-bar, .fb-setup-overlay { display: none !important; }
+  #tab-preview { display: block !important; }
+  .ata-cards-container {
+    background: white; padding: 0; gap: 4px;
+    display: block !important;
+  }
+  .ata-card {
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+    border-radius: 4px !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 5px;
+  }
+  .ata-card-header {
+    border-radius: 4px !important;
+    padding: 8px 10px !important;
+    break-inside: avoid;
+  }
+  .ata-card-header .ata-title { font-size: 13px !important; }
+  .ata-card-header .ata-subtitle { font-size: 8px !important; }
+  .ata-meta-item { padding: 3px 7px !important; }
+  .ata-meta-item strong { font-size: 10px !important; }
+  .ata-card-title { font-size: 7px !important; padding: 3px 8px !important; }
+  .ata-card-body { padding: 6px 8px !important; gap: 4px !important; }
+  .ata-cf-label { font-size: 6px !important; }
+  .ata-cf-value { font-size: 10px !important; padding-bottom: 1px !important; }
+  .ata-hino-circle { width: 28px !important; height: 28px !important; font-size: 9px !important; }
+  .ata-hino-info-name { font-size: 9px !important; }
+  .ata-card-hino { padding: 4px 7px !important; }
+  .ata-chamado-nome { font-size: 9px !important; }
+  .ata-chamado-badge { width: 18px !important; height: 18px !important; font-size: 7px !important; }
+  .ata-anuncio-item { font-size: 9px !important; padding: 2px 0 !important; }
+  .ata-obs-text { font-size: 9px !important; }
+  .ata-sigs { margin-top: 8px !important; }
+  .ata-sig { font-size: 7px !important; padding-top: 3px !important; }
+  .ata-card-testemunho { border-radius: 4px !important; padding: 10px !important; break-inside: avoid; }
+  .ata-card-grid2 { gap: 4px !important; }
+  .ata-card-grid3 { gap: 3px !important; }
 }
 
 /* ===== MOBILE FIRST ===== */
@@ -450,15 +489,15 @@ body { font-family: 'Raleway', sans-serif; background: #2C2416; background-image
     <div class="action-bar" id="action-bar">
       <button class="action-btn btn-whats" onclick="shareWhatsApp()">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-        WhatsApp
+        WhatsApp (PDF)
       </button>
-      <button class="action-btn btn-image" onclick="saveAsImage()">
+      <button class="action-btn btn-image" onclick="saveAsImagePDF()">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        Salvar Imagem
+        Salvar PDF
       </button>
-      <button class="action-btn btn-print" onclick="window.print()">
+      <button class="action-btn btn-print" onclick="printAta()">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-        Imprimir
+        Imprimir A4
       </button>
     </div>
     <div id="ata-output" class="ata-cards-container">
@@ -523,6 +562,8 @@ body { font-family: 'Raleway', sans-serif; background: #2C2416; background-image
 <script>
 let anuncios = [], chamados = [];
 let nomes = { autoridades: [], visitantes: [] };
+let _uid = 0;
+function uid() { return ++_uid; }
 let meetingType = 'normal';
 let currentPickerTarget = null;
 
@@ -574,7 +615,7 @@ function showTab(tab) {
 
 // ── NAMES (autoridades / visitantes) ─────────────────────────
 function addNome(grupo) {
-  const id = Date.now(); nomes[grupo].push(id);
+  const id = uid(); nomes[grupo].push(id);
   const el = document.createElement('div');
   el.id = grupo+'-item-'+id;
   el.style.cssText='display:flex;gap:0.5rem;align-items:center';
@@ -589,7 +630,7 @@ function getNomes(grupo) { return nomes[grupo].map(id=>{const el=document.getEle
 
 // ── ANUNCIOS ─────────────────────────────────────────────────
 function addAnuncio() {
-  const id = Date.now(); anuncios.push(id);
+  const id = uid(); anuncios.push(id);
   const el = document.createElement('div');
   el.id='anuncio-'+id; el.style.cssText='display:flex;gap:0.5rem;align-items:center;margin-bottom:0.45rem';
   el.innerHTML=`<input type="text" id="anuncio-text-${id}" placeholder="Descreva o anuncio..." style="flex:1;border:1px solid #D4C9B0;background:#FFFDF8;border-radius:6px;padding:0.48rem 0.7rem;font-family:Raleway,sans-serif;font-size:0.85rem;outline:none"><button class="remove-btn" onclick="removeAnuncio(${id})">&#x2715;</button>`;
@@ -600,7 +641,7 @@ function removeAnuncio(id) { anuncios=anuncios.filter(x=>x!==id); document.getEl
 
 // ── CHAMADOS ─────────────────────────────────────────────────
 function addChamado() {
-  const id = Date.now(); chamados.push(id);
+  const id = uid(); chamados.push(id);
   const el = document.createElement('div');
   el.id='chamado-'+id; el.className='chamado-row';
   el.innerHTML=`<select id="chamado-tipo-${id}" style="border:1px solid #D4C9B0;background:#FFFDF8;border-radius:6px;padding:0.45rem 0.3rem;font-size:0.8rem;font-family:Raleway,sans-serif;outline:none"><option value="A">Apoio (A)</option><option value="D">Desobrigacao (D)</option></select><input type="text" id="chamado-nome-${id}" placeholder="Nome — Cargo/Chamado" style="border:1px solid #D4C9B0;background:#FFFDF8;border-radius:6px;padding:0.48rem 0.7rem;font-family:Raleway,sans-serif;font-size:0.85rem;outline:none"><button class="remove-btn" onclick="removeChamado(${id})">&#x2715;</button>`;
@@ -780,45 +821,145 @@ function selectHino(num, nome) {
 }
 
 // ── SHARE & EXPORT ────────────────────────────────────────────
-function shareWhatsApp() {
-  const ala = document.getElementById('ala-nome').value || 'Ala';
-  const data = document.getElementById('data').value;
-  const [y,m,d] = (data||'').split('-');
-  const dataFmt = data ? d+'/'+m+'/'+y : '—';
-  const pres = document.getElementById('presidindo').value || '—';
-  const dir  = document.getElementById('dirigindo').value || '—';
-  const tipo = meetingType === 'normal' ? 'Normal' : 'Testemunhos';
-  const txt = [
-    '⛪ *Ata Sacramental – ' + ala + '*',
-    '📅 Data: ' + dataFmt + '  |  Tipo: ' + tipo,
-    '👤 Presidindo: ' + pres,
-    '👤 Dirigindo: ' + dir,
-    '',
-    '_Gerado pelo App Ata Sacramental_'
-  ].join('\n');
-  window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
+// ── Helper: gera canvas da ata ────────────────────────────
+async function gerarCanvasAta() {
+  if (!window.html2canvas) throw new Error('html2canvas nao carregado');
+  const container = document.getElementById('ata-output');
+  const bar = document.getElementById('action-bar');
+  const syncBar = document.getElementById('sync-bar');
+  bar.style.display = 'none';
+  if (syncBar) syncBar.style.display = 'none';
+  await new Promise(r => setTimeout(r, 150));
+  const canvas = await html2canvas(container, {
+    scale: 2.5,
+    backgroundColor: '#F5F0E8',
+    useCORS: true,
+    logging: false,
+    windowWidth: 480,
+    width: container.scrollWidth,
+    height: container.scrollHeight
+  });
+  bar.style.display = '';
+  if (syncBar && db) syncBar.style.display = '';
+  return canvas;
 }
 
-async function saveAsImage() {
-  if (!window.html2canvas) { alert('Aguarde o carregamento e tente novamente.'); return; }
-  const container = document.getElementById('ata-output');
+// ── Helper: mostra loader ──────────────────────────────────
+function showLoader(msg) {
   const loader = document.createElement('div');
   loader.className = 'export-loading';
-  loader.innerHTML = '<div class="export-spinner"></div><span>Gerando imagem...</span>';
+  loader.id = 'export-loader';
+  loader.innerHTML = '<div class="export-spinner"></div><span>' + msg + '</span>';
   document.body.appendChild(loader);
-  const bar = document.getElementById('action-bar');
-  bar.style.display = 'none';
-  try {
-    await new Promise(r => setTimeout(r, 120));
-    const canvas = await html2canvas(container, { scale:2, backgroundColor:'#F5F0E8', useCORS:true, logging:false });
-    const link = document.createElement('a');
-    const ala = (document.getElementById('ala-nome').value||'ata').replace(/\s+/g,'-').toLowerCase();
-    link.download = 'ata-' + ala + '.png';
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-  } catch(e) { alert('Nao foi possivel gerar a imagem. Tente imprimir.'); }
-  finally { bar.style.display=''; document.body.removeChild(loader); }
+  return loader;
 }
+function hideLoader() {
+  const l = document.getElementById('export-loader');
+  if (l) document.body.removeChild(l);
+}
+
+// ── Helper: nome do arquivo ────────────────────────────────
+function nomeArquivo(ext) {
+  const ala = (document.getElementById('ala-nome').value||'ata').replace(/\s+/g,'-').toLowerCase();
+  const data = document.getElementById('data').value || '';
+  return 'ata-' + (data || ala) + '.' + ext;
+}
+
+// ── WhatsApp: gera PDF e compartilha ──────────────────────
+async function shareWhatsApp() {
+  const loader = showLoader('Gerando PDF para WhatsApp...');
+  try {
+    const canvas = await gerarCanvasAta();
+    const pdf = await canvasParaPDF(canvas);
+    const pdfBlob = pdf.output('blob');
+    const arquivo = nomeArquivo('pdf');
+
+    // Tenta Web Share API (celular) — suporta arquivos
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([pdfBlob], arquivo, { type: 'application/pdf' })] })) {
+      const file = new File([pdfBlob], arquivo, { type: 'application/pdf' });
+      hideLoader();
+      await navigator.share({ title: 'Ata Sacramental', files: [file] });
+    } else {
+      // Fallback: baixa o PDF e abre WhatsApp Web com texto
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url; link.download = arquivo; link.click();
+      URL.revokeObjectURL(url);
+      hideLoader();
+      const ala = document.getElementById('ala-nome').value || 'Ala';
+      const data = document.getElementById('data').value;
+      const [y,m,d] = (data||'').split('-');
+      const txt = '⛪ *Ata Sacramental – ' + ala + '*\n📅 ' + (data?d+'/'+m+'/'+y:'') + '\n_PDF salvo — envie pelo WhatsApp_';
+      setTimeout(() => window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank'), 500);
+    }
+  } catch(e) {
+    hideLoader();
+    alert('Erro ao gerar PDF: ' + e.message);
+  }
+}
+
+// ── Salvar PDF (imagem dentro do PDF) ─────────────────────
+async function canvasParaPDF(canvas) {
+  const { jsPDF } = window.jspdf;
+  const imgData = canvas.toDataURL('image/jpeg', 0.95);
+  const pxToMm = 25.4 / 96;
+  const imgW = canvas.width / 2.5;  // reverter scale
+  const imgH = canvas.height / 2.5;
+  const mmW = imgW * pxToMm;
+  const mmH = imgH * pxToMm;
+
+  // A4: 210 x 297mm
+  const A4_W = 210, A4_H = 297;
+  const margem = 10;
+  const dispW = A4_W - margem * 2;
+  const ratio = dispW / mmW;
+  const finalW = dispW;
+  const finalH = mmH * ratio;
+
+  const pdf = new jsPDF({ orientation: finalH > A4_H ? 'p' : 'p', unit: 'mm', format: 'a4' });
+  let posY = margem;
+  let restH = finalH;
+
+  while (restH > 0) {
+    const pageH = A4_H - margem * 2;
+    const sliceH = Math.min(restH, pageH);
+    const srcY = (finalH - restH) / ratio / pxToMm * 2.5;
+    const slicePx = sliceH / ratio / pxToMm * 2.5;
+
+    // Recortar fatia do canvas para cada pagina
+    const sliceCanvas = document.createElement('canvas');
+    sliceCanvas.width = canvas.width;
+    sliceCanvas.height = Math.ceil(slicePx);
+    const ctx = sliceCanvas.getContext('2d');
+    ctx.drawImage(canvas, 0, -Math.floor(srcY), canvas.width, canvas.height);
+    const sliceImg = sliceCanvas.toDataURL('image/jpeg', 0.95);
+    pdf.addImage(sliceImg, 'JPEG', margem, posY, finalW, sliceH);
+
+    restH -= sliceH;
+    if (restH > 0) { pdf.addPage(); posY = margem; }
+  }
+  return pdf;
+}
+
+async function saveAsImagePDF() {
+  if (!window.html2canvas || !window.jspdf) { alert('Aguarde o carregamento completo e tente novamente.'); return; }
+  const loader = showLoader('Gerando PDF...');
+  try {
+    const canvas = await gerarCanvasAta();
+    const pdf = await canvasParaPDF(canvas);
+    pdf.save(nomeArquivo('pdf'));
+  } catch(e) {
+    alert('Erro ao gerar PDF: ' + e.message);
+  } finally { hideLoader(); }
+}
+
+// ── Imprimir com layout A4 otimizado ─────────────────────
+function printAta() {
+  window.print();
+}
+
+// manter compatibilidade
+function saveAsImage() { saveAsImagePDF(); }
 
 // ── GENERATE ATA ──────────────────────────────────────────────
 function generateAta() {
