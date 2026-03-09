@@ -821,7 +821,16 @@ function selectHino(num, nome) {
 }
 
 // ── SHARE & EXPORT ────────────────────────────────────────────
-// ── Helper: gera canvas da ata ────────────────────────────
+
+const EXPORT_CSS = `
+  .ata-card, .ata-card-header, .ata-card-testemunho {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: translateY(0) !important;
+  }
+`;
+
+// Captura cada card individualmente -> array de canvases
 async function gerarCanvasAta() {
   if (!window.html2canvas) throw new Error('html2canvas nao carregado');
   const container = document.getElementById('ata-output');
@@ -832,74 +841,98 @@ async function gerarCanvasAta() {
   if (syncBar) syncBar.style.display = 'none';
   await new Promise(r => setTimeout(r, 100));
 
-  const canvas = await html2canvas(container, {
-    scale          : 2,
-    backgroundColor: '#F5F0E8',
-    useCORS        : true,
-    allowTaint     : true,
-    logging        : false,
-    scrollX        : -window.scrollX,
-    scrollY        : -window.scrollY,
-    onclone: (doc) => {
-      // Remove animacao cardIn APENAS dos elementos que a possuem
-      // (cardIn começa em opacity:0 — causava cards invisiveis no PDF)
-      // Nao usar * pois quebraria opacidades intencionais dos cards
-      const style = doc.createElement('style');
-      style.textContent = `
-        .ata-card,
-        .ata-card-header,
-        .ata-card-testemunho {
-          animation: none !important;
-          opacity: 1 !important;
-          transform: translateY(0) !important;
-        }
-      `;
-      doc.head.appendChild(style);
-    }
-  });
+  const cards = Array.from(container.children);
+  const canvases = [];
+
+  for (const card of cards) {
+    const c = await html2canvas(card, {
+      scale          : 2,
+      backgroundColor: null,
+      useCORS        : true,
+      allowTaint     : true,
+      logging        : false,
+      scrollX        : -window.scrollX,
+      scrollY        : -window.scrollY,
+      onclone        : (doc) => {
+        const s = doc.createElement('style');
+        s.textContent = EXPORT_CSS;
+        doc.head.appendChild(s);
+      }
+    });
+    canvases.push(c);
+  }
 
   bar.style.display = '';
   if (syncBar && db) syncBar.style.display = '';
-  return canvas;
+  return canvases;
 }
 
-// ── Helper: mostra loader ──────────────────────────────────
-function showLoader(msg) {
-  const loader = document.createElement('div');
-  loader.className = 'export-loading';
-  loader.id = 'export-loader';
-  loader.innerHTML = '<div class="export-spinner"></div><span>' + msg + '</span>';
-  document.body.appendChild(loader);
-  return loader;
-}
-function hideLoader() {
-  const l = document.getElementById('export-loader');
-  if (l) document.body.removeChild(l);
+// Empacota canvases em paginas A4 sem cortar nenhum card
+async function canvasParaPDF(canvases) {
+  const { jsPDF } = window.jspdf;
+
+  const A4_W = 210, A4_H = 297;
+  const MX = 10, MT = 10, MB = 10, GAP = 3; // mm
+  const dispW = A4_W - MX * 2; // 190mm largura util
+
+  const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+  let curY     = MT;
+  let firstPg  = true;
+
+  for (const canvas of canvases) {
+    const mmPerPx = dispW / canvas.width;
+    const cardH   = canvas.height * mmPerPx;
+    const gap     = firstPg ? 0 : GAP;
+
+    // Se nao couber na pagina atual, abre nova
+    if (!firstPg && curY + gap + cardH > A4_H - MB) {
+      pdf.addPage();
+      curY = MT;
+    }
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.93);
+    pdf.addImage(imgData, 'JPEG', MX, curY + gap, dispW, cardH);
+    curY    += gap + cardH;
+    firstPg  = false;
+  }
+
+  return pdf;
 }
 
-// ── Helper: nome do arquivo ────────────────────────────────
-function nomeArquivo(ext) {
-  const ala = (document.getElementById('ala-nome').value||'ata').replace(/\s+/g,'-').toLowerCase();
-  const data = document.getElementById('data').value || '';
-  return 'ata-' + (data || ala) + '.' + ext;
+async function saveAsImagePDF() {
+  if (!window.html2canvas || !window.jspdf) { alert('Aguarde o carregamento completo e tente novamente.'); return; }
+  const loader = showLoader('Gerando PDF...');
+  try {
+    const canvases = await gerarCanvasAta();
+    const pdf      = await canvasParaPDF(canvases);
+    pdf.save(nomeArquivo('pdf'));
+  } catch(e) {
+    alert('Erro ao gerar PDF: ' + e.message);
+  } finally { hideLoader(); }
 }
+
+// ── Imprimir com layout A4 otimizado ─────────────────────
+function printAta() {
+  window.print();
+}
+
+// manter compatibilidade
+function saveAsImage() { saveAsImagePDF(); }
 
 // ── WhatsApp: gera PDF e compartilha ──────────────────────
 async function shareWhatsApp() {
   const loader = showLoader('Gerando PDF para WhatsApp...');
   try {
-    const canvas = await gerarCanvasAta();
-    const pdf = await canvasParaPDF(canvas);
+    const canvases = await gerarCanvasAta();
+    const pdf = await canvasParaPDF(canvases);
     const pdfBlob = pdf.output('blob');
     const arquivo = nomeArquivo('pdf');
 
-    // Tenta Web Share API (celular) — suporta arquivos
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([pdfBlob], arquivo, { type: 'application/pdf' })] })) {
       const file = new File([pdfBlob], arquivo, { type: 'application/pdf' });
       hideLoader();
       await navigator.share({ title: 'Ata Sacramental', files: [file] });
     } else {
-      // Fallback: baixa o PDF e abre WhatsApp Web com texto
       const url = URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');
       link.href = url; link.download = arquivo; link.click();
@@ -917,70 +950,7 @@ async function shareWhatsApp() {
   }
 }
 
-// ── Salvar PDF (imagem dentro do PDF) ─────────────────────
-async function canvasParaPDF(canvas) {
-  const { jsPDF } = window.jspdf;
 
-  const A4_W = 210, A4_H = 297, MARGIN = 10;
-  const dispW = A4_W - MARGIN * 2; // 190mm area util
-  const dispH = A4_H - MARGIN * 2; // 277mm por pagina
-
-  // Quantos mm tem cada pixel do canvas (considerando o scale=2 em 96dpi)
-  // canvas.width em px / (96dpi * scale / 25.4mm) = largura em mm
-  // Mas como nao sabemos o dpi exato do monitor, usamos a proporcao direta:
-  // fitScale encaixa a largura do canvas na area util (190mm)
-  const mmPerPx  = dispW / canvas.width;   // mm por pixel de canvas
-  const totalHmm = canvas.height * mmPerPx; // altura total em mm
-
-  const numPaginas = Math.ceil(totalHmm / dispH);
-
-  // Pixels de canvas que cabem em uma pagina
-  const pageHpx = Math.round(dispH / mmPerPx);
-
-  const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-
-  for (let pg = 0; pg < numPaginas; pg++) {
-    if (pg > 0) pdf.addPage();
-
-    const startPx = pg * pageHpx;
-    const sliceH  = Math.min(pageHpx, canvas.height - startPx);
-    if (sliceH <= 0) break;
-
-    const fatia = document.createElement('canvas');
-    fatia.width  = canvas.width;
-    fatia.height = sliceH;
-    const ctx = fatia.getContext('2d');
-    ctx.fillStyle = '#F5F0E8';
-    ctx.fillRect(0, 0, fatia.width, fatia.height);
-    ctx.drawImage(canvas, 0, startPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
-
-    const imgData = fatia.toDataURL('image/jpeg', 0.93);
-    const imgHmm  = sliceH * mmPerPx;
-    pdf.addImage(imgData, 'JPEG', MARGIN, MARGIN, dispW, imgHmm);
-  }
-
-  return pdf;
-}
-
-async function saveAsImagePDF() {
-  if (!window.html2canvas || !window.jspdf) { alert('Aguarde o carregamento completo e tente novamente.'); return; }
-  const loader = showLoader('Gerando PDF...');
-  try {
-    const canvas = await gerarCanvasAta();
-    const pdf = await canvasParaPDF(canvas);
-    pdf.save(nomeArquivo('pdf'));
-  } catch(e) {
-    alert('Erro ao gerar PDF: ' + e.message);
-  } finally { hideLoader(); }
-}
-
-// ── Imprimir com layout A4 otimizado ─────────────────────
-function printAta() {
-  window.print();
-}
-
-// manter compatibilidade
-function saveAsImage() { saveAsImagePDF(); }
 
 // ── GENERATE ATA ──────────────────────────────────────────────
 function generateAta() {
