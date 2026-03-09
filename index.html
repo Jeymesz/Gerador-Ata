@@ -825,23 +825,38 @@ function selectHino(num, nome) {
 async function gerarCanvasAta() {
   if (!window.html2canvas) throw new Error('html2canvas nao carregado');
   const container = document.getElementById('ata-output');
-  const bar = document.getElementById('action-bar');
-  const syncBar = document.getElementById('sync-bar');
+  const bar       = document.getElementById('action-bar');
+  const syncBar   = document.getElementById('sync-bar');
+
   bar.style.display = 'none';
   if (syncBar) syncBar.style.display = 'none';
-  await new Promise(r => setTimeout(r, 150));
-  // Captura com largura fixa de 420px para layout consistente no PDF
+  await new Promise(r => setTimeout(r, 100));
+
   const canvas = await html2canvas(container, {
-    scale: 2.5,
+    scale          : 2,
     backgroundColor: '#F5F0E8',
-    useCORS: true,
-    logging: false,
-    width: 420,
-    windowWidth: 420,
-    scrollX: 0,
-    scrollY: 0,
-    height: container.scrollHeight
+    useCORS        : true,
+    allowTaint     : true,
+    logging        : false,
+    scrollX        : -window.scrollX,
+    scrollY        : -window.scrollY,
+    onclone: (doc) => {
+      // Desativa TODAS as animacoes e garante opacidade total
+      // (cardIn começa com opacity:0 — sem isso os cards somem no PDF)
+      const style = doc.createElement('style');
+      style.textContent = `
+        *, *::before, *::after {
+          animation: none !important;
+          animation-delay: 0s !important;
+          transition: none !important;
+          opacity: 1 !important;
+          transform: none !important;
+        }
+      `;
+      doc.head.appendChild(style);
+    }
   });
+
   bar.style.display = '';
   if (syncBar && db) syncBar.style.display = '';
   return canvas;
@@ -905,53 +920,42 @@ async function shareWhatsApp() {
 async function canvasParaPDF(canvas) {
   const { jsPDF } = window.jspdf;
 
-  // A4 em mm
-  const A4_W = 210, A4_H = 297, MARGEM = 10;
-  const dispW = A4_W - MARGEM * 2; // largura disponivel = 190mm
-  const dispH = A4_H - MARGEM * 2; // altura por pagina = 277mm
+  const A4_W = 210, A4_H = 297, MARGIN = 10;
+  const dispW = A4_W - MARGIN * 2; // 190mm area util
+  const dispH = A4_H - MARGIN * 2; // 277mm por pagina
 
-  // Converter canvas pixels -> mm (96dpi, scale=2.5)
-  const DPI = 96, SCALE = 2.5;
-  const px2mm = 25.4 / (DPI * SCALE);
-  const totalMmH = canvas.height * px2mm;   // altura total em mm
-  const totalMmW = canvas.width  * px2mm;   // largura total em mm
+  // Quantos mm tem cada pixel do canvas (considerando o scale=2 em 96dpi)
+  // canvas.width em px / (96dpi * scale / 25.4mm) = largura em mm
+  // Mas como nao sabemos o dpi exato do monitor, usamos a proporcao direta:
+  // fitScale encaixa a largura do canvas na area util (190mm)
+  const mmPerPx  = dispW / canvas.width;   // mm por pixel de canvas
+  const totalHmm = canvas.height * mmPerPx; // altura total em mm
 
-  // Fator de escala: encaixa largura do canvas na area disponivel
-  const escala = dispW / totalMmW;
-  const alturaFinalMm = totalMmH * escala;  // altura final apos escala
+  const numPaginas = Math.ceil(totalHmm / dispH);
 
-  // Quantas paginas precisamos?
-  const numPaginas = Math.ceil(alturaFinalMm / dispH);
+  // Pixels de canvas que cabem em uma pagina
+  const pageHpx = Math.round(dispH / mmPerPx);
 
   const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
 
   for (let pg = 0; pg < numPaginas; pg++) {
     if (pg > 0) pdf.addPage();
 
-    // Qual trecho do canvas corresponde a esta pagina (em pixels do canvas original)
-    const startMm = pg * dispH;           // inicio em mm
-    const endMm   = Math.min(startMm + dispH, alturaFinalMm); // fim em mm
-    const sliceHMm = endMm - startMm;    // altura da fatia em mm
+    const startPx = pg * pageHpx;
+    const sliceH  = Math.min(pageHpx, canvas.height - startPx);
+    if (sliceH <= 0) break;
 
-    // Converter de volta para pixels no canvas original
-    const startPx = Math.floor(startMm / escala / px2mm);
-    const sliceHPx = Math.ceil(sliceHMm / escala / px2mm);
-
-    // Criar canvas da fatia
     const fatia = document.createElement('canvas');
     fatia.width  = canvas.width;
-    fatia.height = Math.min(sliceHPx, canvas.height - startPx);
+    fatia.height = sliceH;
     const ctx = fatia.getContext('2d');
-    ctx.drawImage(canvas,
-      0, startPx,                    // origem no canvas fonte
-      canvas.width, fatia.height,    // tamanho fonte
-      0, 0,                          // destino
-      fatia.width, fatia.height      // tamanho destino
-    );
+    ctx.fillStyle = '#F5F0E8';
+    ctx.fillRect(0, 0, fatia.width, fatia.height);
+    ctx.drawImage(canvas, 0, startPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
 
-    const imgData = fatia.toDataURL('image/jpeg', 0.92);
-    const alturaImg = (fatia.height * px2mm) * escala;
-    pdf.addImage(imgData, 'JPEG', MARGEM, MARGEM, dispW, alturaImg);
+    const imgData = fatia.toDataURL('image/jpeg', 0.93);
+    const imgHmm  = sliceH * mmPerPx;
+    pdf.addImage(imgData, 'JPEG', MARGIN, MARGIN, dispW, imgHmm);
   }
 
   return pdf;
