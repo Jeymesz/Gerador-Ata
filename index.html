@@ -841,16 +841,17 @@ async function gerarCanvasAta() {
     scrollX        : -window.scrollX,
     scrollY        : -window.scrollY,
     onclone: (doc) => {
-      // Desativa TODAS as animacoes e garante opacidade total
-      // (cardIn começa com opacity:0 — sem isso os cards somem no PDF)
+      // Remove animacao cardIn APENAS dos elementos que a possuem
+      // (cardIn começa em opacity:0 — causava cards invisiveis no PDF)
+      // Nao usar * pois quebraria opacidades intencionais dos cards
       const style = doc.createElement('style');
       style.textContent = `
-        *, *::before, *::after {
+        .ata-card,
+        .ata-card-header,
+        .ata-card-testemunho {
           animation: none !important;
-          animation-delay: 0s !important;
-          transition: none !important;
           opacity: 1 !important;
-          transform: none !important;
+          transform: translateY(0) !important;
         }
       `;
       doc.head.appendChild(style);
